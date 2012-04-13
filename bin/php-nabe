@@ -1,0 +1,179 @@
+#!/bin/bash
+
+cd `dirname $0`
+cd ..
+PVM_PATH=`pwd`
+
+function isInstalled() {
+    if [ -f $PVM_PATH/installed ]; then
+        pattern=`echo $1 | sed -e 's/\./\\\./g'`
+        if grep -e "^$pattern$" $PVM_PATH/installed > /dev/null ; then
+            return 1;
+        fi
+    fi
+
+    return 0;
+}
+
+function getCurrentVersion() {
+    if [ ! -f $PVM_PATH/current ]; then
+        return -1;
+    fi
+
+    cat $PVM_PATH/current
+}
+
+function downloadSrc() {
+    if [ ! -d $PVM_PATH/src ]; then
+        mkdir $PVM_PATH/src
+    fi
+
+    if [ ! -d $PVM_PATH/downloads ]; then
+        mkdir $PVM_PATH/downloads
+    fi
+
+    if [ ! -d $PVM_PATH/downloads/tmp ]; then
+        mkdir $PVM_PATH/downloads/tmp
+    fi
+
+    cd $PVM_PATH/downloads
+
+    if [ ! -f php-$1.tar.gz ]; then
+
+        URL="https://github.com/php/php-src/tarball/php-$2"
+        curl -L -# -o php-$1.tar.gz.tmp $URL
+
+        if [ $? -ne 0 ]; then
+            echo "[ERR] could't download sourcecode."
+            return -1;
+        fi
+
+        mv php-$1.tar.gz.tmp php-$1.tar.gz
+
+    fi
+
+    tar zxvf $PVM_PATH/downloads/php-$1.tar.gz -C $PVM_PATH/downloads/tmp
+    mv $PVM_PATH/downloads/tmp/php-php-src-* $PVM_PATH/src/php-$1
+
+    return 0;
+}
+
+function php-nabe() {
+    case $1 in
+        
+    "h" | "help" )
+
+        echo "help" ;;
+
+    "install" )
+
+        isInstalled $2
+        if [ $? -eq 1 ]; then
+            echo "Installed $2"
+            exit 1;
+        fi
+
+        downloadSrc $2
+
+        cd $PVM_PATH/src/php-$2
+        ./buildconf --force
+        if [ $? -ne 0 ]; then
+            exit 1;
+        fi
+
+        PREFIX=$PVM_PATH/build/php-$2
+        ./configure --prefix=$PREFIX --with-config-file-path=$PREFIX/etc --with-config-file-scan-dir=$PREFIX/etc/conf.d
+        if [ $? -ne 0 ]; then
+            exit 1;
+        fi
+
+        make distclean
+
+        make
+        if [ $? -ne 0 ]; then
+            exit 1;
+        fi
+
+        make install
+        if [ $? -ne 0 ]; then
+            exit 1;
+        fi
+
+        cp $PVM_PATH/src/php-$2/php.ini-development $PREFIX/etc/php.ini
+
+        echo $2 >> $PVM_PATH/installed
+
+        ;;
+    "use")
+
+        isInstalled $2
+        if [ $? -eq 0 ]; then
+            echo "$2 hadn't installed yet."
+            exit 1;
+        fi
+
+        for bname in pear peardev pecl phar php php-cgi php-config phpize; do
+            rm -f $PVM_PATH/bin/$bname
+            ln -s $PVM_PATH/build/php-$2/bin/$bname $PVM_PATH/bin/$bname
+        done
+
+        echo "change version to $2"
+        echo $2 > $PVM_PATH/current
+        ;;
+
+    "ls")
+
+        version=`getCurrentVersion`
+
+        for data in `sort $PVM_PATH/installed`
+        do
+            if [ "$version" = "$data" ]; then
+                echo "=> "$data
+            else
+                echo "   "$data
+            fi
+        done
+        ;;
+
+    "ext-install")
+
+        version=`getCurrentVersion`
+        if [ $? -eq -1 ]; then
+            echo "You can not select version."
+            exit 1
+        fi
+
+        $PVM_PATH/build/php-$version/bin/php $PVM_PATH/lib/checkext.php $2
+        if [ $? -eq 0 ]; then
+            echo "You installed $2 extension already."
+            exit 0
+        fi
+
+        downloadSrc $version
+
+        cd $PVM_PATH/src/php-$version
+
+        if [ -d ext/$2 ]; then
+            # ext
+            cd ext/$2
+            $PVM_PATH/build/php-$version/bin/phpize
+            ./configure --with-php-config=$PVM_PATH/build/php-$version/bin/php-config
+            make
+            make install
+        else
+            # pecl
+            $PVM_PATH/build/php-$version/bin/pecl install $2
+        fi
+
+        if [ ! -d $PVM_PATH/build/php-$version/etc/conf.d ]; then
+            mkdir $PVM_PATH/build/php-$version/etc/conf.d
+        fi
+
+        echo "extension=$2.so" > $PVM_PATH/build/php-$version/etc/conf.d/$2.ini
+
+    esac
+}
+
+[ $# -eq 0 ] && pvm "help" && exit 1;
+
+php-nabe $@

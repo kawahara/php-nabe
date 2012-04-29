@@ -1,3 +1,4 @@
+bin/composer
 bin/pear
 bin/peardev
 bin/pecl

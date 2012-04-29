@@ -2,12 +2,40 @@
 
 cd `dirname $0`
 cd ..
-PVM_PATH=`pwd`
+PHP_NABE_PATH=`pwd`
+
+declare -a tmp_params=(${@})
+params=()
+
+with_mysqlnd=true
+is_rebuild=false
+
+for (( i = 0; i < ${#tmp_params[@]} ; i++ ))
+do
+    case ${tmp_params[$i]} in
+
+        "--disable-mysqlnd" )
+
+            with_mysqlnd=false
+
+            ;;
+
+        "--rebuild" )
+
+            is_rebuild=true
+
+            ;;
+
+        *)
+            params=("${params[@]}" "${tmp_params[$i]}")
+            ;;
+    esac
+done
 
 function isInstalled() {
-    if [ -f $PVM_PATH/installed ]; then
+    if [ -f $PHP_NABE_PATH/installed ]; then
         pattern=`echo $1 | sed -e 's/\./\\\./g'`
-        if grep -e "^$pattern$" $PVM_PATH/installed > /dev/null ; then
+        if grep -e "^$pattern$" $PHP_NABE_PATH/installed > /dev/null ; then
             return 1;
         fi
     fi
@@ -16,24 +44,27 @@ function isInstalled() {
 }
 
 function getCurrentVersion() {
-    if [ ! -f $PVM_PATH/current ]; then
+    if [ ! -f $PHP_NABE_PATH/current ]; then
         return 1;
     fi
 
-    cat $PVM_PATH/current
+    cat $PHP_NABE_PATH/current
 }
 
 function downloadSrc() {
-    if [ ! -d $PVM_PATH/src ]; then
-        mkdir $PVM_PATH/src
+    if [ ! -d $PHP_NABE_PATH/src ]; then
+        mkdir $PHP_NABE_PATH/src
     fi
 
-    if [ ! -d $PVM_PATH/src/php-src ]; then
+    cd $PHP_NABE_PATH/src
+
+    if [ ! -d $PHP_NABE_PATH/src/php-src ]; then
         git clone https://github.com/php/php-src.git
     fi
 
-    cd $PVM_PATH/src/php-src
+    cd $PHP_NABE_PATH/src/php-src
     git clean -fd
+    git fetch
 
     git checkout php-$1
 
@@ -52,6 +83,7 @@ function php-nabe() {
 
         echo "help"
         exit 0
+
         ;;
 
     "install" )
@@ -60,16 +92,22 @@ function php-nabe() {
             exit 1;
         fi
 
-        isInstalled $2
-        if [ $? -eq 1 ]; then
-            echo "Installed $2"
-            exit 1;
+        if ! $is_rebuild ; then
+            isInstalled $2
+            if [ $? -eq 1 ]; then
+                echo "Installed $2"
+                exit 1;
+            fi
         fi
 
         # install autoconf-2.59d
-        if [ ! -d $PVM_PATH/build/autoconf-2.59d ]; then
-            cd $PVM_PATH/src
-            if [ ! -d $PVM_PATH/src/autoconf ]; then
+        if [ ! -d $PHP_NABE_PATH/build/autoconf-2.59d ]; then
+            if [ ! -d $PHP_NABE_PATH/src ]; then
+                mkdir $PHP_NABE_PATH/src
+            fi
+
+            cd $PHP_NABE_PATH/src
+            if [ ! -d $PHP_NABE_PATH/src/autoconf ]; then
                 git clone git://git.sv.gnu.org/autoconf
             fi
             cd autoconf
@@ -81,7 +119,7 @@ function php-nabe() {
                 exit 1;
             fi
 
-            ./configure --prefix=$PVM_PATH/build/autoconf-2.59d
+            ./configure --prefix=$PHP_NABE_PATH/build/autoconf-2.59d
             if [ $? -ne 0 ]; then
                 echo "failed to configure"
                 exit 1;
@@ -103,16 +141,27 @@ function php-nabe() {
             exit 1;
         fi
 
-        export PHP_AUTOCONF=$PVM_PATH/build/autoconf-2.59d/bin/autoconf
+        export PHP_AUTOCONF=$PHP_NABE_PATH/build/autoconf-2.59d/bin/autoconf
 
-        cd $PVM_PATH/src/php-src
+        cd $PHP_NABE_PATH/src/php-src
         ./buildconf --force
         if [ $? -ne 0 ]; then
             exit 1;
         fi
 
-        PREFIX=$PVM_PATH/build/php-$2
-        ./configure --prefix=$PREFIX --with-config-file-path=$PREFIX/etc --with-config-file-scan-dir=$PREFIX/etc/conf.d
+        rm -fr $PHP_NABE_PATH/src/php-src/include/*
+        make clean
+
+        # for extension of mysql, mysqli, pdo_mysql
+        if $with_mysqlnd ; then
+            export PHP_MYSQLND_ENABLED=yes
+            mkdir -p include/php/ext/mysqlnd
+            cp ext/mysqlnd/*.h include/php/mysqlnd
+        fi
+
+        PREFIX=$PHP_NABE_PATH/build/php-$2
+        ./configure --prefix=$PREFIX --with-config-file-path=$PREFIX/etc --with-config-file-scan-dir=$PREFIX/etc/conf.d "${params[@]:2}"
+
         if [ $? -ne 0 ]; then
             exit 1;
         fi
@@ -127,9 +176,12 @@ function php-nabe() {
             exit 1;
         fi
 
-        cp $PVM_PATH/src/php-src/php.ini-development $PREFIX/etc/php.ini
+        cp $PHP_NABE_PATH/src/php-src/php.ini-development $PREFIX/etc/php.ini
 
-        echo $2 >> $PVM_PATH/installed
+        isInstalled $2
+        if [ $? -eq 0 ]; then
+            echo $2 >> $PHP_NABE_PATH/installed
+        fi
 
         ;;
     "use")
@@ -141,19 +193,19 @@ function php-nabe() {
         fi
 
         for bname in pear peardev pecl phar php php-cgi php-config phpize; do
-            rm -f $PVM_PATH/bin/$bname
-            ln -s $PVM_PATH/build/php-$2/bin/$bname $PVM_PATH/bin/$bname
+            rm -f $PHP_NABE_PATH/bin/$bname
+            ln -s $PHP_NABE_PATH/build/php-$2/bin/$bname $PHP_NABE_PATH/bin/$bname
         done
 
         echo "change version to $2"
-        echo $2 > $PVM_PATH/current
+        echo $2 > $PHP_NABE_PATH/current
         ;;
 
     "ls")
 
         version=`getCurrentVersion`
 
-        for data in `sort $PVM_PATH/installed`
+        for data in `sort $PHP_NABE_PATH/installed`
         do
             if [ "$version" = "$data" ]; then
                 echo "=> "$data
@@ -163,6 +215,7 @@ function php-nabe() {
         done
         ;;
 
+
     "ext-install")
 
         if [ "$2" = "" ]; then
@@ -170,15 +223,17 @@ function php-nabe() {
         fi
 
         version=`getCurrentVersion`
-        if [ $? -eq -1 ]; then
+        if [ $? -ne 0 ]; then
             echo "You can not select version."
             exit 1
         fi
 
-        $PVM_PATH/build/php-$version/bin/php $PVM_PATH/lib/checkext.php $2
-        if [ $? -eq 0 ]; then
-            echo "You installed $2 extension already."
-            exit 1
+        if ! $is_rebuild ; then
+            $PHP_NABE_PATH/build/php-$version/bin/php $PHP_NABE_PATH/lib/checkext.php $2
+            if [ $? -eq 0 ]; then
+                echo "You installed $2 extension already."
+                exit 1
+            fi
         fi
 
         downloadSrc $version
@@ -186,13 +241,13 @@ function php-nabe() {
             exit 1;
         fi
 
-        cd $PVM_PATH/src/php-src
+        cd $PHP_NABE_PATH/src/php-src
 
         if [ -d ext/$2 ]; then
             # ext
             cd ext/$2
-            $PVM_PATH/build/php-$version/bin/phpize
-            ./configure --with-php-config=$PVM_PATH/build/php-$version/bin/php-config
+            $PHP_NABE_PATH/build/php-$version/bin/phpize
+            ./configure --with-php-config=$PHP_NABE_PATH/build/php-$version/bin/php-config "${params[@]:2}"
             if [ $? -ne 0 ]; then
                 exit 1;
             fi
@@ -209,21 +264,48 @@ function php-nabe() {
 
         else
             # pecl
-            $PVM_PATH/build/php-$version/bin/pecl install $2
+            $PHP_NABE_PATH/build/php-$version/bin/pecl install $2
             if [ $? -ne 0 ]; then
                 exit 1;
             fi
         fi
 
-        if [ ! -d $PVM_PATH/build/php-$version/etc/conf.d ]; then
-            mkdir $PVM_PATH/build/php-$version/etc/conf.d
+        if [ ! -d $PHP_NABE_PATH/build/php-$version/etc/conf.d ]; then
+            mkdir $PHP_NABE_PATH/build/php-$version/etc/conf.d
         fi
 
-        echo "extension=$2.so" > $PVM_PATH/build/php-$version/etc/conf.d/$2.ini
+        echo "extension=$2.so" > $PHP_NABE_PATH/build/php-$version/etc/conf.d/$2.ini
+
+        ;;
+
+    "ext-remove")
+
+        if [ "$2" = "" ]; then
+            exit 1;
+        fi
+
+        version=`getCurrentVersion`
+        if [ $? -ne 0 ]; then
+            echo "You can not select version."
+            exit 1
+        fi
+
+        echo $PHP_NABE_PATH/build/php-$version/etc/conf.d/$2.ini
+
+        ;;
+
+    "composer-install")
+
+        cd $PHP_NABE_PATH/bin
+        curl -s http://getcomposer.org/installer | $PHP_NABE_PATH/bin/php
+
+        if [ $? -eq 0 ]; then
+            mv composer.phar composer
+        fi
 
     esac
 }
 
-[ $# -eq 0 ] && pvm "help" && exit 1;
+[ ${#params[@]} -eq 0 ] && php-nabe "help" && exit 1;
 
-php-nabe $@
+php-nabe "${params[@]}"

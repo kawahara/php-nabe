@@ -108,7 +108,7 @@ function php-nabe() {
 
             cd $PHP_NABE_PATH/src
             if [ ! -d $PHP_NABE_PATH/src/autoconf ]; then
-                git clone git://git.sv.gnu.org/autoconf
+                git clone https://github.com/kergoth/autoconf
             fi
             cd autoconf
 

@@ -294,6 +294,12 @@ function php-nabe() {
 
         ;;
 
+    "ext-ls")
+        version=`getCurrentVersion`
+        $PHP_NABE_PATH/build/php-$version/bin/php $PHP_NABE_PATH/lib/listext.php
+
+        ;;
+
     "composer-install")
 
         cd $PHP_NABE_PATH/bin

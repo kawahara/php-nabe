@@ -9,6 +9,8 @@ params=()
 
 with_mysqlnd=true
 is_rebuild=false
+is_clean_source=false
+is_use_git=false
 
 for (( i = 0; i < ${#tmp_params[@]} ; i++ ))
 do
@@ -17,13 +19,21 @@ do
         "--disable-mysqlnd" )
 
             with_mysqlnd=false
-
             ;;
 
         "--rebuild" )
 
             is_rebuild=true
+            ;;
 
+        "--clean-source" )
+
+            is_clean_source=true
+            ;;
+
+        "--git" )
+
+            is_use_git=true
             ;;
 
         *)
@@ -52,17 +62,107 @@ function getCurrentVersion() {
 }
 
 function downloadSrc() {
+    if $is_use_git ; then
+        return downloadSrcFromGit $1
+    fi
+
+
     if [ ! -d $PHP_NABE_PATH/src ]; then
         mkdir $PHP_NABE_PATH/src
     fi
 
     cd $PHP_NABE_PATH/src
 
-    if [ ! -d $PHP_NABE_PATH/src/php-src ]; then
-        git clone https://github.com/php/php-src.git
+    if $is_clean_source ; then
+        rm -fr php-$1
+        rm -fr php-$1.tar.gz
     fi
 
-    cd $PHP_NABE_PATH/src/php-src
+    if [ ! -e php-$1.tar.gz ]; then
+        # download 1
+        curl -f -L "http://jp1.php.net/get/php-$1.tar.gz/from/this/mirror" > php-$1.tar.gz
+
+        if [ $? -ne 0 ]; then
+
+            mjv=`echo $1 | awk 'match($0, /^[0-9]+\./) { print substr($0,RSTART,RLENGTH-1) }'`
+
+            # download 2
+            curl -f -L "http://museum.php.net/php$mjv/php-$1.tar.gz" > php-$1.tar.gz
+
+            if [ $? -ne 0 ]; then
+
+                echo "[ERR] couln't download sourcecode."
+                rm php-$1.tar.gz
+
+                return 1;
+            fi
+        fi
+    fi
+
+    if [ ! -d php-$1 ]; then
+        tar zxvf php-$1.tar.gz
+    fi
+
+    rm php-src
+    ln -s php-$1 php-src
+
+    return 0;
+}
+
+function buildAutoconf() {
+    # install autoconf-2.59d
+    if [ ! -d $PHP_NABE_PATH/build/autoconf-2.59d ]; then
+        if [ ! -d $PHP_NABE_PATH/src ]; then
+            mkdir $PHP_NABE_PATH/src
+        fi
+
+        cd $PHP_NABE_PATH/src
+        if [ ! -d $PHP_NABE_PATH/src/autoconf ]; then
+            git clone https://github.com/kergoth/autoconf
+        fi
+        cd autoconf
+
+        git clean -df
+        git checkout AUTOCONF-2.59d
+        if [ $? -ne 0 ]; then
+            echo "failed to checkout autoconf-2.59d"
+            exit 1;
+        fi
+
+        ./configure --prefix=$PHP_NABE_PATH/build/autoconf-2.59d
+        if [ $? -ne 0 ]; then
+            echo "failed to configure"
+            exit 1;
+        fi
+
+        make
+        if [ $? -ne 0 ]; then
+            exit 1;
+        fi
+
+        make install
+        if [ $? -ne 0 ]; then
+            exit 1;
+        fi
+    fi
+
+    export PHP_AUTOCONF=$PHP_NABE_PATH/build/autoconf-2.59d/bin/autoconf
+}
+
+
+function downloadSrcFromGit() {
+    if [ ! -d $PHP_NABE_PATH/src ]; then
+        mkdir $PHP_NABE_PATH/src
+    fi
+
+    cd $PHP_NABE_PATH/src
+
+    if [ ! -d $PHP_NABE_PATH/src/php-src-git ]; then
+        git clone https://github.com/php/php-src.git php-src-git
+    fi
+
+    cd $PHP_NABE_PATH/src/php-src-git
+    git checkout .
     git clean -fd
     git fetch
 
@@ -70,8 +170,13 @@ function downloadSrc() {
 
     if [ $? -ne 0 ]; then
         echo "[ERR] could't download sourcecode."
+
         return 1;
     fi
+
+    cd ..
+    rm php-src
+    ln -s php-src-git php-src
 
     return 0;
 }
@@ -100,48 +205,11 @@ function php-nabe() {
             fi
         fi
 
-        # install autoconf-2.59d
-        if [ ! -d $PHP_NABE_PATH/build/autoconf-2.59d ]; then
-            if [ ! -d $PHP_NABE_PATH/src ]; then
-                mkdir $PHP_NABE_PATH/src
-            fi
-
-            cd $PHP_NABE_PATH/src
-            if [ ! -d $PHP_NABE_PATH/src/autoconf ]; then
-                git clone https://github.com/kergoth/autoconf
-            fi
-            cd autoconf
-
-            git clean -df
-            git checkout AUTOCONF-2.59d
-            if [ $? -ne 0 ]; then
-                echo "failed to checkout autoconf-2.59d"
-                exit 1;
-            fi
-
-            ./configure --prefix=$PHP_NABE_PATH/build/autoconf-2.59d
-            if [ $? -ne 0 ]; then
-                echo "failed to configure"
-                exit 1;
-            fi
-
-            make
-            if [ $? -ne 0 ]; then
-                exit 1;
-            fi
-
-            make install
-            if [ $? -ne 0 ]; then
-                exit 1;
-            fi
-        fi
-
+        buildAutoconf
         downloadSrc $2
         if [ $? -ne 0 ]; then
             exit 1;
         fi
-
-        export PHP_AUTOCONF=$PHP_NABE_PATH/build/autoconf-2.59d/bin/autoconf
 
         cd $PHP_NABE_PATH/src/php-src
         ./buildconf --force
@@ -194,7 +262,11 @@ function php-nabe() {
 
         for bname in pear peardev pecl phar php php-cgi php-config phpize; do
             rm -f $PHP_NABE_PATH/bin/$bname
-            ln -s $PHP_NABE_PATH/build/php-$2/bin/$bname $PHP_NABE_PATH/bin/$bname
+
+            binfile=$PHP_NABE_PATH/build/php-$2/bin/$bname
+            if [ -e $binfile ] ; then
+                ln -s $binfile $PHP_NABE_PATH/bin/$bname
+            fi
         done
 
         echo "change version to $2"
@@ -214,7 +286,6 @@ function php-nabe() {
             fi
         done
         ;;
-
 
     "ext-install")
 

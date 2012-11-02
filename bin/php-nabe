@@ -37,9 +37,14 @@ do
             is_use_git=true
             ;;
 
+        "-h" | "--help" )
+
+            params=("help" "${params[@]}")
+
+            ;;
         *)
 
-            if echo "${tmp_params[$i]}" | grep '^--' > /dev/null ; then
+            if echo "${tmp_params[$i]}" | grep '^-' > /dev/null ; then
                 options=("${options[@]}" "${tmp_params[$i]}")
             else
                 params=("${params[@]}" "${tmp_params[$i]}")

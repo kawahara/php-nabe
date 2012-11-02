@@ -273,6 +273,15 @@ function php-nabe() {
         echo $2 > $PHP_NABE_PATH/current
         ;;
 
+    "disable")
+
+        for bname in pear peardev pecl phar php php-cgi php-config phpize; do
+            rm -f $PHP_NABE_PATH/bin/$bname
+        done
+        rm -f $PHP_NABE_PATH/current
+
+        ;;
+
     "ls")
 
         version=`getCurrentVersion`

@@ -198,7 +198,31 @@ function php-nabe() {
         
     "h" | "help" )
 
-        echo "help"
+        cat <<EOT
+Usage: php-nabe <command> [<args>] [<--options>]
+
+Available Commands
+
+    php-nabe help                    Show this help
+    php-nabe install <version>       Download php-src and install
+    php-nabe ls                      List up installed version
+    php-nabe use <version>           Select version
+    php-nabe disable                 Disable php under the php-nabe
+    php-nabe ext-install <extension> Install an extension
+    php-nabe ext-remove <extension>  Disable an extension
+    php-nabe ext-ls                  List up installed extension
+    php-nabe composer-install        Download composer and install
+
+Install option
+
+    --disable-mysqlnd  Disable mysqlnd extension
+    --rebuild          Rebuild
+    --clean-source     Before building, remove old source code
+    --git              Get code from git repository
+
+    Also, you can use another option for ./configure
+
+EOT
         exit 0
 
         ;;

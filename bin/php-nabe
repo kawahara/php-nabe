@@ -6,6 +6,7 @@ PHP_NABE_PATH=`pwd`
 
 declare -a tmp_params=(${@})
 params=()
+options=()
 
 with_mysqlnd=true
 is_rebuild=false
@@ -37,7 +38,13 @@ do
             ;;
 
         *)
-            params=("${params[@]}" "${tmp_params[$i]}")
+
+            if echo "${tmp_params[$i]}" | grep '^--' > /dev/null ; then
+                options=("${options[@]}" "${tmp_params[$i]}")
+            else
+                params=("${params[@]}" "${tmp_params[$i]}")
+            fi
+
             ;;
     esac
 done
@@ -228,7 +235,7 @@ function php-nabe() {
         fi
 
         PREFIX=$PHP_NABE_PATH/build/php-$2
-        ./configure --prefix=$PREFIX --with-config-file-path=$PREFIX/etc --with-config-file-scan-dir=$PREFIX/etc/conf.d "${params[@]:2}"
+        ./configure --prefix=$PREFIX --with-config-file-path=$PREFIX/etc --with-config-file-scan-dir=$PREFIX/etc/conf.d "${options[@]}"
 
         if [ $? -ne 0 ]; then
             exit 1;
@@ -327,7 +334,7 @@ function php-nabe() {
             # ext
             cd ext/$2
             $PHP_NABE_PATH/build/php-$version/bin/phpize
-            ./configure --with-php-config=$PHP_NABE_PATH/build/php-$version/bin/php-config "${params[@]:2}"
+            ./configure --with-php-config=$PHP_NABE_PATH/build/php-$version/bin/php-config "${options[@]}"
             if [ $? -ne 0 ]; then
                 exit 1;
             fi

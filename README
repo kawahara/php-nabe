@@ -7,6 +7,7 @@ Get php-nabe
 mkdir ~/.php-nabe
 cd ~/.php-nabe
 git clone https://github.com/kawahara/php-nabe
+$HOME/.php-nabe/php-nabe/php-nabe setup
 
 export PATH=$HOME/.php-nabe/php-nabe/bin:$PATH
 

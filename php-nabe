@@ -1,7 +1,12 @@
 #!/bin/bash
 
-cd `dirname $0`
-cd ..
+real=`readlink $0`
+if [ $real ]; then
+    cd `dirname $real`
+else
+    cd `dirname $0`
+fi
+
 PHP_NABE_PATH=`pwd`
 
 declare -a tmp_params=(${@})
@@ -203,6 +208,7 @@ Usage: php-nabe <command> [<args>] [<--options>]
 
 Available Commands
 
+    php-nabe setup                   Iniatialize bin directory
     php-nabe help                    Show this help
     php-nabe install <version>       Download php-src and install
     php-nabe ls                      List up installed version
@@ -224,6 +230,15 @@ Install option
 
 EOT
         exit 0
+
+        ;;
+
+    "setup" )
+
+        if [ ! -a $PHP_NABE_PATH/bin ]; then
+            mkdir bin
+            ln -s $PHP_NABE_PATH/php-nabe bin/php-nabe
+        fi
 
         ;;
 
@@ -296,25 +311,24 @@ EOT
             exit 1;
         fi
 
-        for bname in pear peardev pecl phar php php-cgi php-config phpize; do
-            rm -f $PHP_NABE_PATH/bin/$bname
-
-            binfile=$PHP_NABE_PATH/build/php-$2/bin/$bname
-            if [ -e $binfile ] ; then
-                ln -s $binfile $PHP_NABE_PATH/bin/$bname
-            fi
-        done
-
         echo "change version to $2"
         echo $2 > $PHP_NABE_PATH/current
+
+        rm -fr bin
+        ln -s $PHP_NABE_PATH/build/php-$2/bin bin
+        ln -s $PHP_NABE_PATH/php-nabe bin/php-nabe
+        if [ -f $PHP_NABE_PATH/composer ]; then
+            ln -s $PHP_NABE_PATH/composer bin/composer
+        fi
+
         ;;
 
     "disable")
 
-        for bname in pear peardev pecl phar php php-cgi php-config phpize; do
-            rm -f $PHP_NABE_PATH/bin/$bname
-        done
         rm -f $PHP_NABE_PATH/current
+        rm -fr bin
+        mkdir bin
+        ln -s $PHP_NABE_PATH/php-nabe bin/php-nabe
 
         ;;
 
@@ -418,12 +432,22 @@ EOT
 
     "composer-install")
 
-        cd $PHP_NABE_PATH/bin
         curl -s http://getcomposer.org/installer | $PHP_NABE_PATH/bin/php
 
         if [ $? -eq 0 ]; then
             mv composer.phar composer
         fi
+
+        if [ -a $PHP_NABE_PATH/bin ]; then
+            ln -s $PHP_NABE_PATH/composer bin/composer
+        fi
+
+        ;;
+
+    *)
+
+        echo "Unknown command"
+        php-nabe "help"
 
     esac
 }

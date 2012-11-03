@@ -1,12 +1,5 @@
-bin/composer
-bin/pear
-bin/peardev
-bin/pecl
-bin/phar
-bin/php
-bin/php-cgi
-bin/php-config
-bin/phpize
+composer
+bin
 vendor
 build
 src

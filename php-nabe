@@ -317,7 +317,7 @@ EOT
         rm -fr $PHP_NABE_PATH/bin
         ln -s $PHP_NABE_PATH/build/php-$2/bin bin
 
-        if [ ! -e $PHP_NABE_PATH/php-nabe ]; then
+        if [ ! -e $PHP_NABE_PATH/bin/php-nabe ]; then
             ln -s $PHP_NABE_PATH/php-nabe bin/php-nabe
         fi
 

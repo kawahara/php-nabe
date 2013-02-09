@@ -70,6 +70,14 @@ function isInstalled() {
     return 0;
 }
 
+function isInstalledExt() {
+    if php-nabe ext-ls | egrep -e "^$1$" > /dev/null ; then
+        return 1;
+    fi
+
+    return 0;
+}
+
 function getCurrentVersion() {
     if [ ! -f $PHP_NABE_PATH/current ]; then
         return 1;
@@ -217,6 +225,8 @@ Available Commands
     php-nabe ext-install <extension> Install an extension
     php-nabe ext-remove <extension>  Disable an extension
     php-nabe ext-ls                  List up installed extension
+    php-nabe ext-disable <extension> Disable an extension
+    php-nabe ext-enable <extension>  Enable an extension
     php-nabe composer-install        Download composer and install
 
 Install option
@@ -416,6 +426,27 @@ EOT
 
         if [ "$2" = "" ]; then
             exit 1;
+            fi
+
+        version=`getCurrentVersion`
+        if [ $? -ne 0 ]; then
+            echo "You can not select version."
+            exit 1
+        fi
+
+        rm $PHP_NABE_PATH/build/php-$version/etc/conf.d/$2.ini
+
+        ;;
+
+    "ext-ls")
+        version=`getCurrentVersion`
+        $PHP_NABE_PATH/build/php-$version/bin/php $PHP_NABE_PATH/lib/listext.php
+
+        ;;
+
+    "ext-enable")
+        if [ "$2" = "" ]; then
+            exit 1
         fi
 
         version=`getCurrentVersion`
@@ -424,13 +455,57 @@ EOT
             exit 1
         fi
 
-        echo $PHP_NABE_PATH/build/php-$version/etc/conf.d/$2.ini
+        EXTPATH=`$PHP_NABE_PATH/build/php-$version/bin/php $PHP_NABE_PATH/lib/extpath.php`
+        if [ ! -f "$EXTPATH/$2.so" ]; then
+            echo "$2 is not installed"
+            exit 1
+        fi
+
+        isInstalledExt $2
+        if [ $? -ne 0 ]; then
+            echo "$2 is already enabled"
+            exit 1;
+        fi
+
+        INI_FILE="$PHP_NABE_PATH/build/php-$version/etc/conf.d/$2.ini"
+
+        if [ -f "$INI_FILE" ]; then
+            echo "extension=$2.so" > $INI_FILE
+            echo "enable $2"
+        fi
 
         ;;
 
-    "ext-ls")
+    "ext-disable")
+        if [ "$2" = "" ]; then
+            exit 1
+        fi
+
         version=`getCurrentVersion`
-        $PHP_NABE_PATH/build/php-$version/bin/php $PHP_NABE_PATH/lib/listext.php
+        if [ $? -ne 0 ]; then
+            echo "You can not select version."
+            exit 1
+        fi
+
+        INI_FILE="$PHP_NABE_PATH/build/php-$version/etc/conf.d/$2.ini"
+
+        isInstalledExt $2
+        if [ $? -ne 1 ]; then
+            if [ -f $INI_FILE ]; then
+                echo "$1 is disable now"
+            else
+                echo "$1 is not installed"
+            fi
+            exit 1;
+        fi
+
+        if [ -f "$INI_FILE" ]; then
+            echo "" > $INI_FILE
+            echo "disable $2"
+            return 0
+        fi
+
+        echo "$2 is not installed"
 
         ;;
 

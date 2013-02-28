@@ -88,7 +88,8 @@ function getCurrentVersion() {
 
 function downloadSrc() {
     if $is_use_git ; then
-        return downloadSrcFromGit $1
+        downloadSrcFromGit $1
+        return $?
     fi
 
 

@@ -25,11 +25,11 @@ please use *php-nabe use*.
 
 Example:
 
-  php-nabe use 5.4.0
-  php -v
-  PHP 5.4.0 (cli) (built: Apr 14 2012 09:37:13)
-  Copyright (c) 1997-2012 The PHP Group
-  Zend Engine v2.4.0, Copyright (c) 1998-2012 Zend Technologies
+    php-nabe use 5.4.0
+    php -v
+    PHP 5.4.0 (cli) (built: Apr 14 2012 09:37:13)
+    Copyright (c) 1997-2012 The PHP Group
+    Zend Engine v2.4.0, Copyright (c) 1998-2012 Zend Technologies
 
 List up installed version
 -------------------------
@@ -38,10 +38,10 @@ Use *php-nabe ls*
 
 Example:
 
-  php-nabe ls
-     5.3.10
-  => 5.4.0
-     5.4.1RC1
+    php-nabe ls
+       5.3.10
+    => 5.4.0
+       5.4.1RC1
 
 
 Install extension
@@ -52,7 +52,7 @@ You MUST select any php version.
 
 Example:
 
-  php-nabe ext-install mbstring
+    php-nabe ext-install mbstring
 
 Get composer
 ------------

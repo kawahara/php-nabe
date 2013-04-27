@@ -1,5 +1,6 @@
 composer
 bin
+etc
 vendor
 build
 src

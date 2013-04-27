@@ -207,6 +207,18 @@ function downloadSrcFromGit() {
     return 0;
 }
 
+function checkFpmProcess() {
+    version=$1
+    PHP_BUILD_PATH=$PHP_NABE_PATH/build/php-$version
+    PID_PATH=$PHP_BUILD_PATH/var/run/php-fpm.pid
+    if [ ! -f $PID_PATH ]; then
+        return 1;
+    fi
+    ps axu | grep `cat $PID_PATH` > /dev/null
+
+    return $?
+}
+
 function php-nabe() {
     case $1 in
         
@@ -229,6 +241,9 @@ Available Commands
     php-nabe ext-disable <extension> Disable an extension
     php-nabe ext-enable <extension>  Enable an extension
     php-nabe composer-install        Download composer and install
+    php-nabe fpm-start [<listen>]    Start php-fpm
+    php-nabe fpm-stop                Stop php-fpm
+    php-nabe fpm-reload              Reload php-fpm
 
 Install option
 
@@ -525,6 +540,88 @@ EOT
         if [ -e $PHP_NABE_PATH/bin -a ! -e $PHP_NABE_PATH/bin/composer ]; then
             ln -s $PHP_NABE_PATH/composer bin/composer
         fi
+
+        ;;
+
+    "fpm-start")
+
+        version=`getCurrentVersion`
+        if [ $? -ne 0 ]; then
+            echo "You can not select version."
+            exit 1
+        fi
+
+        PHP_BUILD_PATH=$PHP_NABE_PATH/build/php-$version
+        LISTEN=$2
+
+        if [ ! -f $PHP_BUILD_PATH/sbin/php-fpm ]; then
+            echo "[ERR]php-fpm is not installed."
+
+            exit 1;
+        fi
+
+        if [ ! -f $PHP_BUILD_PATH/etc/php-fpm.conf ]; then
+            cp $PHP_BUILD_PATH/etc/php-fpm.conf.default $PHP_BUILD_PATH/etc/php-fpm.conf
+        fi
+
+        sed -i.backup -e 's/^\;\{0,1\}pid *=.*/pid = run\/php-fpm\.pid/g' $PHP_BUILD_PATH/etc/php-fpm.conf
+
+        if [ "$LISTEN" != "" ]; then
+            LISTEN_E=`echo $LISTEN | sed -e s/\\\\//\\\\\\\\\\\\//g`
+            sed -i.backup2 -e 's/^\;\{0,1\}listen *=.*/listen = '$LISTEN_E'/g' $PHP_BUILD_PATH/etc/php-fpm.conf
+        fi
+
+        checkFpmProcess $version
+        if [ $? -eq 0 ]; then
+            echo "[ERR] There is a process for php-fpm."
+            exit 1;
+        fi
+
+        $PHP_BUILD_PATH/sbin/php-fpm
+
+        ;;
+
+    "fpm-stop")
+
+        version=`getCurrentVersion`
+        if [ $? -ne 0 ]; then
+            echo "You can not select version."
+            exit 1
+        fi
+
+        PHP_BUILD_PATH=$PHP_NABE_PATH/build/php-$version
+
+        checkFpmProcess $version
+        if [ $? -eq 1 ]; then
+            echo "[ERR] There is no process for php-fpm"
+            exit 1;
+        fi
+
+        PID_PATH=$PHP_BUILD_PATH/var/run/php-fpm.pid
+
+        kill `cat $PID_PATH`
+
+        ;;
+
+    "fpm-reload")
+
+        version=`getCurrentVersion`
+        if [ $? -ne 0 ]; then
+            echo "You can not select version."
+            exit 1
+        fi
+
+        PHP_BUILD_PATH=$PHP_NABE_PATH/build/php-$version
+
+        checkFpmProcess $version
+        if [ $? -eq 1 ]; then
+            echo "[ERR] There is no process for php-fpm"
+            exit 1;
+        fi
+
+        PID_PATH=$PHP_BUILD_PATH/var/run/php-fpm.pid
+
+        kill -USR2 `cat $PID_PATH`
 
         ;;
 

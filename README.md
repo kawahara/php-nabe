@@ -14,16 +14,16 @@ export PATH=$HOME/.php-nabe/php-nabe/bin:$PATH
 Install and change version
 --------------------------
 
-Use `php-nabe install`.
+Use *php-nabe install*.
 
-Example::
+Example:
 
   php-nabe install 5.4.0
 
 And if you want to change php's version,
-please use `php-nabe use`.
+please use *php-nabe use*.
 
-Example::
+Example:
 
   php-nabe use 5.4.0
   php -v
@@ -34,9 +34,9 @@ Example::
 List up installed version
 -------------------------
 
-Use `php-nabe ls`
+Use *php-nabe ls*
 
-Example::
+Example:
 
   php-nabe ls
      5.3.10
@@ -47,9 +47,46 @@ Example::
 Install extension
 -----------------
 
-Use `php-nabe ext-install`.
+Use *php-nabe ext-install*.
 You MUST select any php version.
 
-Example::
+Example:
 
   php-nabe ext-install mbstring
+
+Get composer
+------------
+
+You can install the [composer](http://getcomposer.org/) by
+*php-nabe composer-install*.
+
+Example:
+
+    php-nabe composer-install
+    composer -v
+
+FPM Process Control
+-------------------
+
+If you have installed php with *--enable-fpm*,
+you can start/stop/reload php-fpm process.
+
+Example:
+
+    sudo php-nabe fpm-start
+
+You can set the listen address by a first argument.
+
+Example:
+
+    sudo php-nabe fpm-start localhost:9000
+
+And reload and stop is also very easy!
+
+Example:
+
+    # reload
+    sudo php-nabe fpm-reload
+
+    # stop
+    sudo php-nabe fpm-stop

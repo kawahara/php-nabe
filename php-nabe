@@ -386,6 +386,7 @@ EOT
             exit 1;
         fi
 
+        extension_name=${2%-beta}
         version=`getCurrentVersion`
         if [ $? -ne 0 ]; then
             echo "You can not select version."
@@ -393,7 +394,7 @@ EOT
         fi
 
         if ! $is_rebuild ; then
-            $PHP_NABE_PATH/build/php-$version/bin/php $PHP_NABE_PATH/lib/checkext.php $2
+            $PHP_NABE_PATH/build/php-$version/bin/php $PHP_NABE_PATH/lib/checkext.php $extension_name
             if [ $? -eq 0 ]; then
                 echo "You installed $2 extension already."
                 exit 1
@@ -438,7 +439,7 @@ EOT
             mkdir $PHP_NABE_PATH/build/php-$version/etc/conf.d
         fi
 
-        echo "extension=$2.so" > $PHP_NABE_PATH/build/php-$version/etc/conf.d/$2.ini
+        echo "extension=$extension_name.so" > $PHP_NABE_PATH/build/php-$version/etc/conf.d/$extension_name.ini
 
         ;;
 

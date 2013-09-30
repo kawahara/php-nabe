@@ -4,10 +4,10 @@ How to use
 Get php-nabe
 ------------
 
-mkdir ~/.php-nabe
-cd ~/.php-nabe
-git clone https://github.com/kawahara/php-nabe
-$HOME/.php-nabe/php-nabe/php-nabe setup
+    mkdir ~/.php-nabe
+    cd ~/.php-nabe
+    git clone https://github.com/kawahara/php-nabe
+    $HOME/.php-nabe/php-nabe/php-nabe setup
 
 export PATH=$HOME/.php-nabe/php-nabe/bin:$PATH
 
@@ -18,7 +18,7 @@ Use *php-nabe install*.
 
 Example:
 
-  php-nabe install 5.4.0
+    php-nabe install 5.4.0
 
 And if you want to change php's version,
 please use *php-nabe use*.

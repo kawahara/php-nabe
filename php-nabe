@@ -212,8 +212,9 @@ function checkFpmProcess() {
     PHP_BUILD_PATH=$PHP_NABE_PATH/build/php-$version
     PID_PATH=$PHP_BUILD_PATH/var/run/php-fpm.pid
     if [ ! -f $PID_PATH ]; then
-        return 1;
+        return 0;
     fi
+
     ps axu | grep `cat $PID_PATH` > /dev/null
 
     return $?
@@ -573,7 +574,7 @@ EOT
         fi
 
         checkFpmProcess $version
-        if [ $? -eq 0 ]; then
+        if [ $? -eq 1 ]; then
             echo "[ERR] There is a process for php-fpm."
             exit 1;
         fi

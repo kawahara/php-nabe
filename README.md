@@ -9,7 +9,7 @@ Get php-nabe
     git clone https://github.com/kawahara/php-nabe
     $HOME/.php-nabe/php-nabe/php-nabe setup
 
-export PATH=$HOME/.php-nabe/php-nabe/bin:$PATH
+    export PATH=$HOME/.php-nabe/php-nabe/bin:$PATH
 
 Install and change version
 --------------------------

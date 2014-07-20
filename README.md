@@ -1,6 +1,10 @@
 How to use
 ==========
 
+Rquire
+-----------
+GNU grep -- OSX (or BSD based OS) needs GNU grep for compile autoconf
+
 Get php-nabe
 ------------
 

@@ -106,7 +106,7 @@ function downloadSrc() {
 
     if [ ! -e php-$1.tar.gz ]; then
         # download 1
-        curl -f -L "http://jp1.php.net/get/php-$1.tar.gz/from/this/mirror" > php-$1.tar.gz
+        curl -f -L "http://jp2.php.net/get/php-$1.tar.gz/from/this/mirror" > php-$1.tar.gz
 
         if [ $? -ne 0 ]; then
 
